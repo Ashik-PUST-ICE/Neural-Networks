@@ -3,6 +3,10 @@
 # Write a program to evaluate a Recurrent Neural Network (RNN) for text Classification.  DAta set Name is 
 ############# BBC_news Data set ################
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 # Step 1: Import libraries
 import os
 import tensorflow as tf
