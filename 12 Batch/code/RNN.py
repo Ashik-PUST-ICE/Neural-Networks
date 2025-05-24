@@ -1,87 +1,118 @@
 
 
 # Write a program to evaluate a Recurrent Neural Network (RNN) for text Classification.  DAta set Name is 
-############# user-data ################
+############# BBC_news Data set ################
 
-
-# Step 1: Import Libraries
-import pandas as pd
+# Step 1: Import libraries
+import os
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, SimpleRNN, Dense, Dropout
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import SimpleRNN, Dense
-from tensorflow.keras.optimizers import Adam
 
-# Step 2: Load CSV File
-df = pd.read_csv('/content/user-data.csv')
+# Step 2: Mount Google Drive
+from google.colab import drive
+drive.mount('/content/drive')
 
-# Step 3: Data Preprocessing
-df['gender'] = df['gender'].map({'Male': 1, 'Female': 0})  # Gender to numeric
-df = df.drop('user_id', axis=1)  # Remove user_id
-X = df.drop('purchased', axis=1)
-y = df['purchased']
+# Step 3: Define dataset path
+dataset_path = '/content/drive/MyDrive/bbc_news'  # contains subfolders like tech, sport, etc.
 
-# Step 4: Train-Test Split
+# Step 4: Load texts and labels from folders
+texts = []
+labels = []
+
+categories = os.listdir(dataset_path)
+print("Categories:", categories)
+
+for category in categories:
+    folder_path = os.path.join(dataset_path, category)
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+        with open(file_path, 'r', encoding='latin1') as f:
+            text = f.read()
+            texts.append(text)
+            labels.append(category)
+
+print(f"Loaded {len(texts)} documents.")
+
+# Step 5: Encode labels to integers
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(labels)
+
+# Step 6: Tokenize texts
+max_words = 10000  # max vocabulary size
+max_len = 200      # max length of each sequence
+
+tokenizer = Tokenizer(num_words=max_words, oov_token="<OOV>")
+tokenizer.fit_on_texts(texts)
+
+sequences = tokenizer.texts_to_sequences(texts)
+X = pad_sequences(sequences, maxlen=max_len, padding='post')
+
+print(f"Shape of X: {X.shape}")
+print(f"Shape of y: {y.shape}")
+
+# Step 7: Train-test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Step 5: Feature Scaling
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+# Step 8: Build RNN model
+embedding_dim = 64
 
-# RNN needs 3D input: (samples, timesteps, features)
-X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], 1))
-X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], 1))
+model = Sequential([
+    Embedding(input_dim=max_words, output_dim=embedding_dim, input_length=max_len),
+    SimpleRNN(64, return_sequences=False),
+    Dropout(0.5),
+    Dense(32, activation='relu'),
+    Dense(len(categories), activation='softmax')
+])
 
-# Step 6: Build RNN Model
-model = Sequential()
-model.add(SimpleRNN(32, input_shape=(3,1)))
-model.add(Dense(1, activation='sigmoid'))  # Output: 1 neuron for binary classification
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.summary()
 
-# Step 7: Compile the Model
-model.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+# Step 9: Train the model
+epochs = 10
+history = model.fit(X_train, y_train, epochs=epochs, batch_size=32, validation_split=0.1)
 
-# Step 8: Train the Model
-history = model.fit(X_train, y_train, epochs=50, verbose=1)
-
-# Step 9: Evaluate Model on Test Data
+# Step 10: Evaluate model on test set
 loss, accuracy = model.evaluate(X_test, y_test)
-print(f"Test Accuracy: {accuracy * 100:.2f}%")
+print(f"Test accuracy: {accuracy*100:.2f}%")
 
-# Step 10: Plot Accuracy & Loss Curve
+# Step 11: Example prediction
+sample_text = ["The government is planning new economic reforms."]
+
+sample_seq = tokenizer.texts_to_sequences(sample_text)
+sample_pad = pad_sequences(sample_seq, maxlen=max_len, padding='post')
+
+pred = model.predict(sample_pad)
+pred_class = label_encoder.inverse_transform([np.argmax(pred)])
+
+print(f"Prediction for sample text: {pred_class[0]}")
+
+# Step 12: Plot Accuracy & Loss Graphs
 plt.figure(figsize=(12,5))
 
-# Accuracy Plot
+# Accuracy plot
 plt.subplot(1,2,1)
-plt.plot(history.history['accuracy'], label='Accuracy', color='green')
-plt.title("Training Accuracy over Epochs")
+plt.plot(history.history['accuracy'], label='Train Accuracy', color='green')
+plt.plot(history.history['val_accuracy'], label='Val Accuracy', color='blue')
+plt.title("Accuracy over Epochs")
 plt.xlabel("Epochs")
 plt.ylabel("Accuracy")
 plt.legend()
 
-# Loss Plot
+# Loss plot
 plt.subplot(1,2,2)
-plt.plot(history.history['loss'], label='Loss', color='red')
-plt.title("Training Loss over Epochs")
+plt.plot(history.history['loss'], label='Train Loss', color='red')
+plt.plot(history.history['val_loss'], label='Val Loss', color='orange')
+plt.title("Loss over Epochs")
 plt.xlabel("Epochs")
 plt.ylabel("Loss")
 plt.legend()
 
 plt.tight_layout()
 plt.show()
-
-# Step 11: Random New User Prediction
-# Example: Male, 30 years old, salary 80000
-new_user = np.array([[1, 40, 120000]])  # 2D
-new_user_scaled = scaler.transform(new_user)
-new_user_scaled = new_user_scaled.reshape((1, 3, 1))  # Reshape for RNN
-
-prediction = model.predict(new_user_scaled)
-print(f"\nPrediction for New User: {prediction[0][0]:.4f}")
-
-if prediction[0][0] >= 0.5:
-    print("→ Model Predicts: This user will PURCHASE ✅")
-else:
-    print("→ Model Predicts: This user will NOT purchase ❌")
