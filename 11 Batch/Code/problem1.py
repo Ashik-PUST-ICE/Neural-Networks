@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Step function for bipolar input
+# Step function for bipolar input new
 def step_function(x):
     return np.where(x > 0, 1, np.where(x<0,-1,0))
 
