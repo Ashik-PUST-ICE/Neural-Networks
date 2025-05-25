@@ -7,8 +7,12 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load the dataset
-data = pd.read_csv('user-data.csv')
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+data_path = '/content/drive/MyDrive/user-data.csv'
+data = pd.read_csv(data_path)
 
 # Handle categorical variables
 label_encoder = LabelEncoder()

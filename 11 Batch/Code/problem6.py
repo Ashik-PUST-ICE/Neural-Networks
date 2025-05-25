@@ -6,8 +6,13 @@ from tensorflow.keras.preprocessing import image_dataset_from_directory # type: 
 from tensorflow.keras import layers, models # type: ignore
 import matplotlib.pyplot as plt
 
+
+from google.colab import drive
+drive.mount('/content/drive')
+
 # Set paths to your dataset
-fruits_path = r'E:\Course\4-2\Neural Networks-MIH\Sessional\My Code\Fruit Image\Test'
+
+fruits_path = '/content/drive/MyDrive/Test' 
 
 # Create image dataset for the training dataset
 batch_size = 32
@@ -58,7 +63,7 @@ history = model.fit(
 )
 
 # Save the trained model
-model_save_path = r'E:\Course\4-2\Neural Networks-MIH\Sessional\My Code\fruits_model.h5'
+model_save_path ='/content/drive/MyDrive/fruits_model.h5'
 model.save(model_save_path)
 
 # Load and preprocess a random sample image for classification
